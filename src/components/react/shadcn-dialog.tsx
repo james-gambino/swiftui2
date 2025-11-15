@@ -11,9 +11,23 @@ import { globalState } from '@/lib/core/state';
 import {Button} from "@/lib/ui/button.tsx";
 import {createVuePortal} from "@/bridges/FrameworkPortal.ts";
 import PrimevueButton from "@/components/vue/primevue-button.vue";
+import DataGrid from "@/components/vue/DataGrid.vue";
 
 export const ShadcnDialog: React.FC = () => {
     const [count, setCount] = useState(globalState.getState().count);
+
+    const sampleData = {
+        dataSource: [
+            { id: 1, name: 'Laptop', price: 999.99, inStock: true },
+            { id: 2, name: 'Mouse', price: 29.99, inStock: true },
+            { id: 5, name: 'Webcam', price: 89.99, inStock: true }
+        ],
+        columns: [
+            { dataField: 'id', caption: 'ID', width: 80, sortOrder: 'asc' },
+            { dataField: 'price', caption: 'Price', format: 'currency', sortOrder: 'asc' },
+            { dataField: 'inStock', caption: 'In Stock', dataType: 'boolean' }
+        ]
+    };
 
     useEffect(() => {
         const unsubscribe = globalState.subscribe((state) => {
@@ -25,6 +39,8 @@ export const ShadcnDialog: React.FC = () => {
     const vueButton = createVuePortal(PrimevueButton, {
         onIncrement: () => globalState.setCount(count + 1)
     });
+
+    const dataGrid = createVuePortal(DataGrid, sampleData);
 
     return (
         <Dialog>
@@ -40,6 +56,9 @@ export const ShadcnDialog: React.FC = () => {
 
                     <div className="mt-4">
                         {vueButton}
+                    </div>
+                    <div className="mt-4">
+                        {dataGrid}
                     </div>
                 </DialogHeader>
             </DialogContent>

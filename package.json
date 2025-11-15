@@ -11,6 +11,8 @@
     "@radix-ui/react-dialog": "^1.1.15",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "devextreme": "^25.1.6",
+    "devextreme-vue": "^25.1.6",
     "lucide-react": "^0.365.0",
     "primeicons": "^7.0.0",
     "primevue": "^3.53.1",
