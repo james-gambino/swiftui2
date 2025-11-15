@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
     Dialog,
     DialogContent,
@@ -36,11 +36,11 @@ export const ShadcnDialog: React.FC = () => {
         return unsubscribe;
     }, []);
 
-    const vueButton = createVuePortal(PrimevueButton, {
+    const vueButton = useMemo(() => createVuePortal(PrimevueButton, {
         onIncrement: () => globalState.setCount(count + 1)
-    });
+    }), [count]);
 
-    const dataGrid = createVuePortal(DataGrid, sampleData);
+    const dataGrid = useMemo(() => createVuePortal(DataGrid, sampleData), [sampleData]);
 
     return (
         <Dialog>

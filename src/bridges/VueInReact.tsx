@@ -1,5 +1,5 @@
 // src/bridges/VueInReact.tsx
-import { useEffect, useRef } from 'react';
+import {useEffect, useRef, useState} from 'react';
 import { createVNode, render } from 'vue';
 import type { Component as VueComponent } from 'vue';
 
@@ -9,33 +9,35 @@ interface VueInReactProps {
     on?: Record<string, Function>; // Vue event listeners
 }
 
-export const VueInReact: React.FC<VueInReactProps> = ({ component, props = {}, on = {} }) => {
+export const VueInReact: React.FC<VueInReactProps> = ({ component, props = {} }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const cleanupRef = useRef<() => void>();
-
+    const [isMounted, setIsMounted] = useState(false);
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // Создаем контейнер для Vue-реактивности
-        const vnode = createVNode(component, {
-            ...props,
-            // Преобразуем React-обработчики в Vue-эвенты
-            ...Object.fromEntries(
-                Object.entries(on).map(([key, handler]) => [
-                    `on${key.charAt(0).toUpperCase() + key.slice(1)}`,
-                    handler
-                ])
-            )
-        });
-
+        const vnode = createVNode(component, props);
         render(vnode, containerRef.current);
 
-        cleanupRef.current = () => {
-            render(null, containerRef.current!);
-        };
+        setIsMounted(true);
 
-        return cleanupRef.current;
-    }, [component, JSON.stringify(props), JSON.stringify(on)]);
+        return () => {
+            setIsMounted(false);
+
+            queueMicrotask(() => {
+                if (containerRef.current && containerRef.current.parentNode) {
+                    render(null, containerRef.current);
+                }
+            });
+        };
+    }, [component]);
+
+    useEffect(() => {
+        if (!containerRef.current || !isMounted) return;
+
+        // Атомарное обновление props без пересоздания
+        const vnode = createVNode(component, props);
+        render(vnode, containerRef.current);
+    }, [props, isMounted]);
 
     return <div ref={containerRef} className="vue-portal-container" />;
 };

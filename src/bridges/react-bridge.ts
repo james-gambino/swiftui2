@@ -43,6 +43,12 @@ export class ReactBridge {
         const vnode = createVNode(vueComponent, props);
         render(vnode, target);
 
-        return () => render(null, target);
+        return () => {
+            queueMicrotask(() => {
+                if (target && target.parentNode) {
+                    render(null, target);
+                }
+            });
+        };
     }
 }
