@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Framework</title>
+    <style>
+        body { font-family: system-ui; padding: 20px; background: #f3f4f6; }
+        #app { display: flex; flex-direction: column; gap: 20px; max-width: 600px; margin: 0 auto; }
+        .button-row { display: flex; gap: 10px; align-items: center; background: white; padding: 12px; border-radius: 8px; }
+        .native-button { background: #64748b; color: white; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <h1>Framework</h1>
+
+    <div id="counter-slot"></div>
+
+    <div class="button-row">
+        <span style="width: 140px; font-weight: 600;">React Dialog:</span>
+        <div id="dialog-slot"></div>
+    </div>
+
+    <div class="button-row">
+        <span style="width: 140px; font-weight: 600;">React (shadcn/ui):</span>
+        <div id="react-slot"></div>
+    </div>
+
+    <div class="button-row">
+        <span style="width: 140px; font-weight: 600;">Vue (primevue):</span>
+        <div id="vue-slot"></div>
+    </div>
+
+    <div id="input-slot"></div>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
