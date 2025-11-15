@@ -1,22 +1,48 @@
-import { createElement } from 'react';
-import { createRoot } from 'react-dom/client';
-import {NaiveDOM} from "@/lib/core/framework.ts";
+import { createRoot, type Root } from 'react-dom/client';
+import {
+    CleanupFunction,
+    ReactComponent,
+    ReactProps,
+    VueComponent
+} from "@/bridges/bridge.types.ts";
+import {createElement} from "react";
 
-export function createReactBridge(naive: NaiveDOM) {
-    return {
-        register(name: string, Component: React.ComponentType<any>) {
-            naive.register(name, (props, container) => {
-                const wrapper = document.createElement('div');
-                container.appendChild(wrapper);
+export class ReactBridge {
+    private roots = new Map<HTMLElement, Root>();
 
-                const root = createRoot(wrapper);
-                root.render(createElement(Component, props));
+    mount(Component: ReactComponent, target: HTMLElement, props?: ReactProps): CleanupFunction {
+        const { key, ref, children, ...restProps } = props || {};
 
-                return {
-                    element: wrapper,
-                    cleanup: () => root.unmount()
-                };
-            });
+        const element = children
+            ? createElement(Component, { ...restProps, key, ref }, children)
+            : createElement(Component, { ...restProps, key, ref });
+
+
+        let root = this.roots.get(target);
+        if (!root) {
+            root = createRoot(target);
+            this.roots.set(target, root);
         }
-    };
+
+        root.render(element);
+
+        return () => this.unmount(target);
+    }
+
+    unmount(target: HTMLElement): void {
+        const root = this.roots.get(target);
+        if (root) {
+            root.unmount();
+            this.roots.delete(target);
+        }
+    }
+
+    // Рендерим Vue внутри React (через портал)
+    renderVue(vueComponent: VueComponent, target: HTMLElement, props?: Record<string, unknown>): CleanupFunction {
+        const { createVNode, render } = require('vue');
+        const vnode = createVNode(vueComponent, props);
+        render(vnode, target);
+
+        return () => render(null, target);
+    }
 }

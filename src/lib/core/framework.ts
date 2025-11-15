@@ -1,42 +1,104 @@
-type Cleanup = () => void;
-type ComponentRenderer = (props: any, container: HTMLElement) => HTMLElement | { element: HTMLElement; cleanup?: Cleanup };
+import {
+    CleanupFunction,
+    ComponentRenderer,
+    CrossFrameworkBridge,
+    ReactComponent,
+    VueComponent
+} from "@/bridges/bridge.types.ts";
+import {ReactBridge} from "@/bridges/react-bridge.ts";
+import {VueBridge} from "@/bridges/vue-bridge.ts";
 
-export class NaiveDOM {
-    private container: HTMLElement;
-    private components = new Map<string, ComponentRenderer>();
-    private mounted = new Map<string, { element: HTMLElement; cleanup?: Cleanup }>();
 
-    constructor(container: HTMLElement) {
-        this.container = container;
+class NaiveDOM implements CrossFrameworkBridge {
+    private registry = new Map<string, ComponentRenderer>();
+    private instances = new Map<HTMLElement, { renderer: ComponentRenderer; cleanup: CleanupFunction }>();
+    private reactBridge = new ReactBridge();
+    private vueBridge = new VueBridge();
+
+    // Основные методы
+    register(name: string, renderer: ComponentRenderer): void {
+        if (this.registry.has(name)) {
+            console.warn(`[NaiveDOM] Компонент "${name}" уже зарегистрирован.`);
+        }
+        this.registry.set(name, renderer);
     }
 
-    register(name: string, renderer: ComponentRenderer) {
-        this.components.set(name, renderer);
+    mount(name: string, target: HTMLElement, props?: Record<string, unknown>): CleanupFunction {
+        if (this.instances.has(target)) {
+            console.warn(`[NaiveDOM] Элемент уже занят. Размонтирую.`);
+            this.unmount(target);
+        }
+
+        const renderer = this.registry.get(name);
+        if (!renderer) {
+            throw new Error(`[NaiveDOM] Компонент "${name}" не найден.`);
+        }
+
+        const cleanup = renderer.mount(target, props);
+        this.instances.set(target, { renderer, cleanup });
+        return () => this.unmount(target);
     }
 
-    render(componentName: string, props: any = {}, target?: HTMLElement | null) {
-        const renderer = this.components.get(componentName);
-        if (!renderer) throw new Error(`Component "${componentName}" not found`);
+    unmount(target: HTMLElement): void {
+        const instance = this.instances.get(target);
+        if (instance) {
+            instance.cleanup();
+            this.instances.delete(target);
+        }
+    }
 
-        const mountPoint = target || this.container;
-        const key = target ? `target-${target.id || 'unknown'}` : 'root';
+    unmountAll(): void {
+        this.instances.forEach((_, target) => this.unmount(target));
+        this.instances.clear();
+    }
 
-        const prev = this.mounted.get(key);
-        if (prev?.cleanup) prev.cleanup();
+    getStats() {
+        return {
+            registered: this.registry.size,
+            mounted: this.instances.size,
+            components: Array.from(this.instances.entries()).map(([el, _]) => ({
+                element: el.tagName,
+                id: el.id || 'no-id'
+            }))
+        };
+    }
 
-        const result = renderer(props, mountPoint);
-        const element = 'element' in result ? result.element : result;
+    // --- УДОБНЫЕ РЕГИСТРАТОРЫ (вот где магия) ---
 
-        this.mounted.set(key, {
-            element,
-            cleanup: 'cleanup' in result ? result.cleanup : undefined
+    public registerReact(name: string, Component: ReactComponent): void {
+        this.register(name, {
+            mount: (target, props) => this.reactBridge.mount(Component, target, props)
         });
     }
 
-    unmount(target?: HTMLElement | null) {
-        const key = target ? `target-${target.id || 'unknown'}` : 'root';
-        const mounted = this.mounted.get(key);
-        if (mounted?.cleanup) mounted.cleanup();
-        this.mounted.delete(key);
+    public registerVue(name: string, Component: VueComponent): void {
+        this.register(name, {
+            mount: (target, props) => this.vueBridge.mount(Component, target, props)
+        });
     }
+
+    public registerNative(name: string, factory: (props?: Record<string, unknown>) => HTMLElement): void {
+        this.register(name, {
+            mount: (target, props) => {
+                const element = factory(props);
+                target.appendChild(element);
+                return () => element.remove();
+            }
+        });
+    }
+
+    // --- Кросс-рендеринг ---
+
+    public renderInReact(vueComponent: VueComponent, target: HTMLElement, props?: Record<string, unknown>): CleanupFunction {
+        return this.vueBridge.mount(vueComponent, target, props);
+    }
+
+    public renderInVue(reactComponent: ReactComponent, target: HTMLElement, props?: Record<string, unknown>): CleanupFunction {
+        return this.reactBridge.renderVue(reactComponent, target, props);
+    }
+}
+
+export const naiveDOM = new NaiveDOM();
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => naiveDOM.unmountAll());
 }

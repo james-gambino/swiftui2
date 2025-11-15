@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { globalState } from '@/lib/core/state';
 import {Button} from "@/lib/ui/button.tsx";
+import {createVuePortal} from "@/bridges/FrameworkPortal.ts";
+import PrimevueButton from "@/components/vue/primevue-button.vue";
 
 export const ShadcnDialog: React.FC = () => {
     const [count, setCount] = useState(globalState.getState().count);
@@ -19,6 +21,10 @@ export const ShadcnDialog: React.FC = () => {
         });
         return unsubscribe;
     }, []);
+
+    const vueButton = createVuePortal(PrimevueButton, {
+        onIncrement: () => globalState.setCount(count + 1)
+    });
 
     return (
         <Dialog>
@@ -31,6 +37,10 @@ export const ShadcnDialog: React.FC = () => {
                     <DialogDescription>
                         Счётчик: <strong className="text-2xl text-blue-600">{count}</strong>
                     </DialogDescription>
+
+                    <div className="mt-4">
+                        {vueButton}
+                    </div>
                 </DialogHeader>
             </DialogContent>
         </Dialog>

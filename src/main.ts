@@ -1,32 +1,25 @@
 import './index.css';
-import { NaiveDOM } from '@/lib/core/framework';
-import { createCounterDisplay } from '@/components/native/counter-display';
-import { createReactBridge } from '@/bridges/react-bridge';
-import { createVueBridge } from '@/bridges/vue-bridge';
+import { naiveDOM } from '@/lib/core/framework';
 import { ShadcnButton } from '@/components/react/shadcn-button';
 import PrimevueButton from '@/components/vue/primevue-button.vue';
 import VueCounterDisplay from '@/components/vue/counter-display.vue';
 import { ShadcnInput } from '@/components/react/shadcn-input';
-import {ShadcnDialog} from "@/components/react/shadcn-dialog.tsx";
+import { ShadcnDialog } from '@/components/react/shadcn-dialog';
 
-const app = new NaiveDOM(document.getElementById('app')!);
+naiveDOM.registerReact('ShadcnButton', ShadcnButton);
+naiveDOM.registerReact('ShadcnInput', ShadcnInput);
+naiveDOM.registerReact('ShadcnDialog', ShadcnDialog);
+naiveDOM.registerVue('PrimevueButton', PrimevueButton);
+naiveDOM.registerVue('VueCounterDisplay', VueCounterDisplay);
 
-app.register('CounterDisplay', () => createCounterDisplay());
+// Монтирование с проверкой
+const safeMount = (name: string, slotId: string, props = {}) => {
+    const slot = document.getElementById(slotId);
+    if (slot) naiveDOM.mount(name, slot, props);
+};
 
-const reactBridge = createReactBridge(app);
-reactBridge.register('ShadcnButton', ShadcnButton);
-
-const vueBridge = createVueBridge(app);
-vueBridge.register('PrimevueButton', PrimevueButton);
-
-vueBridge.register('VueCounterDisplay', VueCounterDisplay);
-
-reactBridge.register('ShadcnInput', ShadcnInput);
-
-reactBridge.register('ShadcnDialog', ShadcnDialog);
-
-app.render('VueCounterDisplay', {}, document.getElementById('counter-slot')!);
-app.render('ShadcnDialog', {}, document.getElementById('dialog-slot')!);
-app.render('ShadcnButton', { label: 'Нажми меня' }, document.getElementById('react-slot')!);
-app.render('PrimevueButton', { label: 'Нажми меня' }, document.getElementById('vue-slot')!);
-app.render('ShadcnInput', { placeholder: 'Введите и нажмите Enter' }, document.getElementById('input-slot')!);
+safeMount('VueCounterDisplay', 'counter-slot');
+safeMount('ShadcnDialog', 'dialog-slot');
+safeMount('ShadcnButton', 'react-slot', { label: 'Нажми меня' });
+safeMount('PrimevueButton', 'vue-slot', { label: 'Нажми меня' });
+safeMount('ShadcnInput', 'input-slot', { placeholder: 'Введите и нажмите Enter' });

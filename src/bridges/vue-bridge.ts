@@ -1,25 +1,31 @@
-import { createVNode, render as vueRender } from 'vue';
-import {NaiveDOM} from "@/lib/core/framework.ts";
+import { createVNode, render, type VNode } from 'vue';
+import { createRoot } from 'react-dom/client';
+import {CleanupFunction, ReactComponent, ReactProps, VueComponent} from "@/bridges/bridge.types.ts";
 
-export function createVueBridge(naive: NaiveDOM) {
-    return {
-        register(name: string, component: any) {
-            naive.register(name, (props, container) => {
-                const wrapper = document.createElement('div');
-                container.appendChild(wrapper);
+export class VueBridge {
+    private vnodes = new Map<HTMLElement, VNode>();
 
-                const vnode = createVNode(component, props);
-                vueRender(vnode, wrapper);
+    mount(component: VueComponent, target: HTMLElement, props?: Record<string, unknown>): CleanupFunction {
+        const vnode = createVNode(component, props);
+        render(vnode, target);
+        this.vnodes.set(target, vnode);
+        return () => this.unmount(target);
+    }
 
-                return {
-                    element: wrapper,
-                    cleanup: () => {
-                        // Уничтожаем компонент
-                        vueRender(null, wrapper);
-                        wrapper.remove();
-                    }
-                };
-            });
+    unmount(target: HTMLElement): void {
+        const vnode = this.vnodes.get(target);
+        if (vnode) {
+            render(null, target);
+            this.vnodes.delete(target);
         }
-    };
+    }
+
+    // Рендерим React-компонент внутри Vue (через портал)
+    renderReact(reactComponent: ReactComponent, target: HTMLElement, props?: ReactProps): CleanupFunction {
+        const root = createRoot(target);
+        const { createElement } = require('react');
+        const element = createElement(reactComponent, props);
+        root.render(element);
+        return () => root.unmount();
+    }
 }
